@@ -29,6 +29,13 @@ class Matrix3D(object):
         else:
             return self.__data[key]
 
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            self.__data[key[0]][key[1]] = value
+        else:
+            raise TypeError("Matrix3D allowes only single value settings")
+
+
     @classmethod
     def identity(cls):
         """
@@ -82,7 +89,7 @@ class Matrix3D(object):
         return Matrix3D(new_data)
 
     def dot(self, other):
-        """ 
+        """
         return dot product of these to 4x4 matrices
         Matrix A : self
         Matrix B : other
@@ -118,6 +125,103 @@ class Matrix3D(object):
             row_vec = Vector3D.from_list(self.__data[index])
             ret_data[index] = row_vec.dot(vector)
         return Vector3D.from_list(ret_data)
+
+    def det(self):
+        """
+        calculates determinat of matrix
+
+        | a1  b1  c1  d1 |
+        | a2  b2  c2  d2 |
+        | a3  b3  c3  d3 |
+        | a4  b4  c4  d4 |
+
+        there exists no easy solution for matrices above 3x3,
+        this implementation uses one possible variant of
+        laplace development sentence (translated from german)
+        http://matheguru.com/lineare-algebra/207-determinante.html
+
+        used solution also here
+
+        http://www.cg.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/teche23.html
+        """
+        data = self.__data
+        det = 0 \
+          + data[0][0] * data[1][1] * data[2][2] * data[3][3] \
+          + data[0][0] * data[1][2] * data[2][3] * data[3][1] \
+          + data[0][0] * data[1][3] * data[2][1] * data[3][2] \
+          + data[0][1] * data[1][0] * data[2][3] * data[3][2] \
+          + data[0][1] * data[1][2] * data[2][0] * data[3][3] \
+          + data[0][1] * data[1][3] * data[2][2] * data[3][0] \
+          + data[0][2] * data[1][0] * data[2][1] * data[3][3] \
+          + data[0][2] * data[1][1] * data[2][3] * data[3][0] \
+          + data[0][2] * data[1][3] * data[2][0] * data[3][1] \
+          + data[0][3] * data[1][0] * data[2][2] * data[3][1] \
+          + data[0][3] * data[1][1] * data[2][0] * data[3][2] \
+          + data[0][3] * data[1][2] * data[2][1] * data[3][0] \
+          - data[0][0] * data[1][1] * data[2][3] * data[3][2] \
+          - data[0][0] * data[1][2] * data[2][1] * data[3][3] \
+          - data[0][0] * data[1][3] * data[2][2] * data[3][1] \
+          - data[0][1] * data[1][0] * data[2][2] * data[3][3] \
+          - data[0][1] * data[1][2] * data[2][3] * data[3][0] \
+          - data[0][1] * data[1][3] * data[2][0] * data[3][2] \
+          - data[0][2] * data[1][0] * data[2][3] * data[3][1] \
+          - data[0][2] * data[1][1] * data[2][0] * data[3][3] \
+          - data[0][2] * data[1][3] * data[2][1] * data[3][0] \
+          - data[0][3] * data[1][0] * data[2][1] * data[3][2] \
+          - data[0][3] * data[1][1] * data[2][2] * data[3][0] \
+          - data[0][3] * data[1][2] * data[2][0] * data[3][1]
+        return det
+
+    def inverse(self):
+        """
+        for further readings look at
+        http://www.euclideanspace.com/maths/algebra/matrix/functions/inverse/fourD/index.htm
+        """
+        z = self.zeros()
+        d = self.__data
+        m00 = d[0][0]
+        m01 = d[0][1]
+        m02 = d[0][2]
+        m03 = d[0][3]
+        m10 = d[1][0]
+        m11 = d[1][1]
+        m12 = d[1][2]
+        m13 = d[1][3]
+        m20 = d[2][0]
+        m21 = d[2][1]
+        m22 = d[2][2]
+        m23 = d[2][3]
+        m30 = d[3][0]
+        m31 = d[3][1]
+        m32 = d[3][2]
+        m33 = d[3][3]
+        z[0,0] = m12*m23*m31 - m13*m22*m31 + m13*m21*m32 - m11*m23*m32 - m12*m21*m33 + m11*m22*m33
+        z[0,1] = m03*m22*m31 - m02*m23*m31 - m03*m21*m32 + m01*m23*m32 + m02*m21*m33 - m01*m22*m33
+        z[0,2] = m02*m13*m31 - m03*m12*m31 + m03*m11*m32 - m01*m13*m32 - m02*m11*m33 + m01*m12*m33
+        z[0,3] = m03*m12*m21 - m02*m13*m21 - m03*m11*m22 + m01*m13*m22 + m02*m11*m23 - m01*m12*m23
+        z[1,0] = m13*m22*m30 - m12*m23*m30 - m13*m20*m32 + m10*m23*m32 + m12*m20*m33 - m10*m22*m33
+        z[1,1] = m02*m23*m30 - m03*m22*m30 + m03*m20*m32 - m00*m23*m32 - m02*m20*m33 + m00*m22*m33
+        z[1,2] = m03*m12*m30 - m02*m13*m30 - m03*m10*m32 + m00*m13*m32 + m02*m10*m33 - m00*m12*m33
+        z[1,3] = m02*m13*m20 - m03*m12*m20 + m03*m10*m22 - m00*m13*m22 - m02*m10*m23 + m00*m12*m23
+        z[2,0] = m11*m23*m30 - m13*m21*m30 + m13*m20*m31 - m10*m23*m31 - m11*m20*m33 + m10*m21*m33
+        z[2,1] = m03*m21*m30 - m01*m23*m30 - m03*m20*m31 + m00*m23*m31 + m01*m20*m33 - m00*m21*m33
+        z[2,2] = m01*m13*m30 - m03*m11*m30 + m03*m10*m31 - m00*m13*m31 - m01*m10*m33 + m00*m11*m33
+        z[2,3] = m03*m11*m20 - m01*m13*m20 - m03*m10*m21 + m00*m13*m21 + m01*m10*m23 - m00*m11*m23
+        z[3,0] = m12*m21*m30 - m11*m22*m30 - m12*m20*m31 + m10*m22*m31 + m11*m20*m32 - m10*m21*m32
+        z[3,1] = m01*m22*m30 - m02*m21*m30 + m02*m20*m31 - m00*m22*m31 - m01*m20*m32 + m00*m21*m32
+        z[3,2] = m02*m11*m30 - m01*m12*m30 - m02*m10*m31 + m00*m12*m31 + m01*m10*m32 - m00*m11*m32
+        z[3,3] = m01*m12*m20 - m02*m11*m20 + m02*m10*m21 - m00*m12*m21 - m01*m10*m22 + m00*m11*m22
+        return z.scale(1/self.det())
+
+    def scale(self, scalar):
+        """
+        scale matrix by scalar
+        return new Matrix3D
+        """
+        new_array = []
+        for row in self.__data:
+            new_array.append([value * scalar for value in row])
+        return Matrix3D(new_array)
 
     @classmethod
     def get_rot_x_matrix(cls, theta):

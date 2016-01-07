@@ -47,7 +47,7 @@ class Mesh3D(object):
             abs_z = abs(vector[2])
             vertices_2d.append((vector[0] / abs_z + shift_x, vector[1] / abs_z + shift_y))
         return vertices_2d
-    
+
     def projected(self, shift_tuple, fov=0.8, viewer_distance=1.1):
         """
         method with field of view and viewer distance

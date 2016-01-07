@@ -3,7 +3,6 @@
 
 import math
 import unittest
-#from Matrix3D import Matrix3D as Matrix3D
 
 class Vector3D(object):
     """Vector in R³ with homogeneous part h"""
@@ -51,7 +50,7 @@ class Vector3D(object):
             return self.x != other.x or self.y != other.y or self.z != other.z or self.h != other.h
         elif method == 5: # >= greater equal
             pass
- 
+
     def __len__(self):
         """list interface"""
         return 4
@@ -178,52 +177,39 @@ class Vector3D(object):
 
         dot product = cos(theta)
 
-        so theta could be calculates as 
+        so theta could be calculates as
         theta = acos(dot product)
         """
         dotproduct = self.x * other.x + self.y * other.y + self.z * other.z
         return dotproduct
-
-#    def m_dot(self, matrix):
-#        """
-#        calculate dot product of Vector3D with matrix (4x4)
-#
-#                          | a1 | b1 | c1 | d1 |
-#        (x, y, z, h)  dot | a2 | b2 | c2 | d2 | = (x*a1 + y*a2 + z*a3 + h*a4, x*b1 + y*b2 + z*b3 + h*b4, x*c1 + y*c2 + z*c3 + h*c4, x*d1 + y*d2 + z*d3 + h*d4)
-#                          | a3 | b3 | c3 | d3 |
-#                          | a4 | b4 | c4 | d4 |
-#        """
-#        assert isinstance(matrix, Matrix3D)
-#        ret_data = [0, 0, 0, 0]
-#        for index in range(4):
-#            col_vec = matrix.col(index)
-#            ret_data[index] = sum((self.__data[a] * col_vec[a] for a in range(4)))
-#        return Vector3D.from_list(ret_data)
 
     def cross(self, other):
         """
         cross product of self and other vector
         the result is a new perpendicular vector to self and other
 
-        the length of the new vector is defined as 
+        the length of the new vector is defined as
         |cross product| = |self| * |other| * cos(theta)
 
-        so the angle theta is calculated as follows
+        so the angle theta between self and other is calculated as follows
 
         theta = asin(|cross product| / (|self| * | other|))
 
         if self and other are unit vectors
 
-        |self| = |other| = 1 
-        
+        |self| = |other| = 1
+
         this simplifies to
-        
+
         |cross product| = sin(theta)
+
+        so you can use the cross product of two vectors two
+        find the angle between these two vector, possible useful for shading/lightning
         """
         return Vector3D(
-            self.y * other.z - self.z * other.y, 
-            self.z * other.x - self.x * other.z, 
-            self.x * other.y - self.y * other.x, 
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
             self.h)
 
     def normalized(self):

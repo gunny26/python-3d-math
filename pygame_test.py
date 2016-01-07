@@ -1,5 +1,4 @@
-#!/usr/bin/python3
-
+#!/usr/bin/python
 import pygame
 import sys
 import math
@@ -9,6 +8,21 @@ import Models3D
 from Mesh3D import Mesh3D as Mesh3D
 from Vector3D import Vector3D as Vector3D
 from Matrix3D import Matrix3D as Matrix3D
+
+# in german Blickwinkel,
+# according to wikipedia, for console games played on TV 60degrees
+# for notebook/pc display usually something between 90 and 100 degrees
+# https://en.wikipedia.org/wiki/Field_of_view_in_video_games
+FOV_ANGLE = 100 * math.pi / 180
+FOV = 1.0 / math.tan(FOV_ANGLE/2.0)
+# how far from the screen is the viewer away
+VIEWER_DISTANCE = 1.1
+
+# shift Z in the background
+X_SHIFT = 0
+Y_SHIFT = 0
+Z_SHIFT = 10
+SCALE = 1.0
 
 class Thing(object):
     """abstract class to represent mesh of polygons"""
@@ -22,8 +36,12 @@ class Thing(object):
         (self.origin_x, self.origin_y) = origin
         self.vector = Vector3D(100, 0, 0, 1)
         self.model = Mesh3D(Models3D.get_cube_polygons())
-        self.model = Mesh3D(self.model.transform(Matrix3D.get_scale_matrix(10, 10, 1)))
         self.center = (surface.get_width() / 2, surface.get_height() / 2)
+        self.angle = 0
+        self.angle_step = math.pi/180
+        self.x_axis = Vector3D(100.0, 0.0, 0.0, 1)
+        self.y_axis = Vector3D(0.0, 100.0, 0.0, 1)
+        self.z_axis = Vector3D(0.0, 0.0, 100.0, 1)
 
     def update(self):
         """
@@ -34,16 +52,29 @@ class Thing(object):
 
         finally painting on surface is called
         """
+        clipping_m = Matrix3D([
+            [FOV * ASPECT_RATIO, 0  , 0                      , 0],
+            [0                 , FOV, 0                      , 0],
+            [0                 , 0  , (far+near)/(far-near)  , 1],
+            [0                 , 0  , (2*near*far)/(near-far), 0]
+        ])
         self.vector = Matrix3D.get_rot_z_matrix(math.pi/180).v_dot(self.vector)
-        self.model = Mesh3D(self.model.transform(Matrix3D.get_rot_z_matrix(math.pi/90)))
+        model = Mesh3D(self.model.transform(Matrix3D.get_rot_z_matrix(self.angle)))
+        model = Mesh3D(model.transform(Matrix3D.get_rot_y_matrix(self.angle)))
+        model = Mesh3D(model.transform(Matrix3D.get_scale_matrix(SCALE, SCALE, SCALE)))
+        # shift it in the back
+        model = Mesh3D(model.transform(Matrix3D.get_shift_matrix(X_SHIFT, Y_SHIFT, Z_SHIFT)))
+        self.angle += self.angle_step
         #self.vector = Matrix3D.get_rot_y_matrix(math.pi/180).v_dot(self.vector)
-        print self.vector
         projected = self.__project(self.vector, self.center)
-        pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), (self.center, projected), 1)
-        pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), self.model.projected(self.center), 1)
+        pygame.draw.polygon(self.surface, pygame.Color(255,0,0,0), (self.center, self.__project(self.x_axis, self.center)), 1)
+        pygame.draw.polygon(self.surface, pygame.Color(0,255,0,0), (self.center, self.__project(self.y_axis, self.center)), 1)
+        pygame.draw.polygon(self.surface, pygame.Color(0,0,255,0), (self.center, self.__project(self.z_axis, self.center)), 1)
+        #pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), (self.center, projected), 1)
+        pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), model.projected(self.center, fov=FOV, viewer_distance=VIEWER_DISTANCE), 1)
 
     @staticmethod
-    def __project(vector, shift_tuple, fov=0.8, viewer_distance=1):
+    def __project(vector, shift_tuple, fov=FOV, viewer_distance=VIEWER_DISTANCE):
         factor = fov / (viewer_distance + vector[2])
         x = vector[0] * factor + shift_tuple[0]
         y = -vector[1] * factor + shift_tuple[1]
@@ -56,46 +87,90 @@ def test():
         fps = 25
         surface = pygame.display.set_mode((600, 600))
         pygame.init()
+        myfont = pygame.font.SysFont("mono", 14)
         objects = (
             Thing(surface, (0, 0)),
         )
-        clock = pygame.time.Clock()       
+        clock = pygame.time.Clock()
         pause = False
         color = pygame.Color(255, 255, 255, 255)
         print "Matrix precalculations done in %s seconds" % (time.time()-total_starttime)
         anim_starttime = time.time()
         frames = 0
+        global VIEWER_DISTANCE
+        global FOV
+        global X_SHIFT
+        global Y_SHIFT
+        global Z_SHIFT
+        global SCALE
         while True:
             clock.tick(fps)
-            events = pygame.event.get()  
-            for event in events:  
-                if event.type == pygame.QUIT:  
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.QUIT:
                     sys.exit(0)
             keyinput = pygame.key.get_pressed()
             if keyinput is not None:
                 # print keyinput
                 if keyinput[pygame.K_ESCAPE]:
                     sys.exit(1)
-                if keyinput[pygame.K_UP]:
-                    viewer_distance += 1
-                if keyinput[pygame.K_DOWN]:
-                    viewer_distance -= 1
-                if keyinput[pygame.K_PLUS]:
-                    fov += .1
-                if keyinput[pygame.K_MINUS]:
-                    fov -= .1
-                if keyinput[pygame.K_p]:
+                elif keyinput[pygame.K_UP]:
+                    VIEWER_DISTANCE += 0.1
+                elif keyinput[pygame.K_DOWN]:
+                    if VIEWER_DISTANCE > 0.1 :
+                        VIEWER_DISTANCE -= 0.1
+                elif keyinput[pygame.K_PLUS]:
+                    FOV += 0.1
+                elif keyinput[pygame.K_MINUS]:
+                    FOV -= 0.1
+                # X/x for X_SHIFT
+                elif keyinput[pygame.K_x]:
+                    if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                        X_SHIFT += 0.1
+                    else:
+                        X_SHIFT -= 0.1
+                # Y/y for Y_SHIFT
+                elif keyinput[pygame.K_y]:
+                    if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                        Y_SHIFT += 0.1
+                    else:
+                        Y_SHIFT -= 0.1
+                # Z/z for Z_SHIFT
+                elif keyinput[pygame.K_z]:
+                    if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                        Z_SHIFT += 0.1
+                    else:
+                        Z_SHIFT -= 0.1
+                # S/s for SCALE
+                elif keyinput[pygame.K_s]:
+                    if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                        SCALE += 0.1
+                    else:
+                        SCALE -= 0.1
+                elif keyinput[pygame.K_p]:
                     pause = not pause
-                if keyinput[pygame.K_r]:
-                    viewer_distance = 256
-                    fov = 2
+                elif keyinput[pygame.K_r]:
+                    VIEWER_DISTANCE = 1.0
+                    FOV = 0.8
             if pause is not True:
                 # clear screen
                 surface.fill((0, 0, 0, 255))
                 for thing in objects:
                     thing.update()
+                text = myfont.render("FOV            : %0.2f" % FOV, 1, (255,255,0))
+                surface.blit(text, (10, 10))
+                text = myfont.render("VIEWER_DISTANCE: %0.2f" % VIEWER_DISTANCE, 1, (255,255,0))
+                surface.blit(text, (10, 24))
+                text = myfont.render("X_SHIFT        : %0.2f" % X_SHIFT, 1, (255,255,0))
+                surface.blit(text, (10, 38))
+                text = myfont.render("Y_SHIFT        : %0.2f" % Y_SHIFT, 1, (255,255,0))
+                surface.blit(text, (10, 52))
+                text = myfont.render("Z_SHIFT        : %0.2f" % Z_SHIFT, 1, (255,255,0))
+                surface.blit(text, (10, 66))
+                text = myfont.render("SCALE          : %0.2f" % SCALE, 1, (255,255,0))
+                surface.blit(text, (10, 80))
                 pygame.display.flip()
-            frames += 1 
+            frames += 1
         duration = time.time() - anim_starttime
         print "Done 100 Frames in %f seonds, average %f fps" % (duration, 100/duration)
         print "Whole program duration %f seconds" % (time.time()-total_starttime)

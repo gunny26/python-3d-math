@@ -17,6 +17,49 @@ class TestClass(unittest.TestCase):
         assert m2 == m1
         m1 *= 2
 
+    def test_det(self):
+        m = Matrix3D.identity()
+        print "det(I)=", m.det()
+        # for next example look at
+        # http://matheguru.com/lineare-algebra/207-determinante.html
+        mr = Matrix3D([
+            [  5,  0,  3, -1 ],
+            [  3,  0,  0,  4 ],
+            [ -1,  2,  4, -2 ],
+            [  1,  0,  0,  5 ],
+        ])
+        print "T(mr)=\n", mr.transpose()
+        print "det(mr)=", mr.det()
+        assert mr.det() == 66
+        print "det(T(mr))=", mr.transpose().det()
+        assert mr.det() == mr.transpose().det()
+
+    def test_scale(self):
+        m = Matrix3D.identity()
+        m2 = m.scale(2.0)
+        print "2 * I:\n", m2
+        m3 = m2.scale(1.0/2.0)
+        print "1/2 * ( 2 * I):\n", m3
+        assert m3 == m
+
+    def test_inverse(self):
+        # for next example look at
+        # http://matheguru.com/lineare-algebra/207-determinante.html
+        mr = Matrix3D([
+            [  5.0,  0.0,  3.0, -1.0 ],
+            [  3.0,  0.0,  0.0,  4.0 ],
+            [ -1.0,  2.0,  4.0, -2.0 ],
+            [  1.0,  0.0,  0.0,  5.0 ],
+        ])
+        print "inverse(mr) =\n", mr.inverse()
+        test_m = Matrix3D([
+           [0.0, 0.4545454545454546, 0.0, -0.36363636363636365],
+           [-0.6666666666666667, 1.7121212121212122, 0.5, -1.303030303030303],
+           [0.33333333333333337, -0.7878787878787878, 0.0, 0.696969696969697],
+           [0.0, -0.09090909090909091, 0.0, 0.2727272727272727]
+        ])
+        assert mr.inverse() == test_m
+
     def test_transformations(self):
         # test zeros
         m = Matrix3D.zeros()
