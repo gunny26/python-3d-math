@@ -4,6 +4,7 @@
 import math
 # own modules
 from Mesh3D import Mesh3D as Mesh3D
+from Face3D import Face3D as Face3D
 from Matrix3D import Matrix3D as Matrix3D
 from Vector3D import Vector3D as Vector3D
 
@@ -28,56 +29,53 @@ def get_triangle_points():
     )
     return points
 
-def get_pyramid_polygons():
-    polygons = []
+def get_pyramid_mesh():
+    faces = []
     # front
-    face = get_triangle_points()
-    transform = Matrix3D.get_shift_matrix(0, 0, 1).dot(Matrix3D.get_rot_x_matrix(-math.pi/4))
-    face = face.dot(transform)
-    face = face.dot(Matrix3D.get_shift_matrix(0, 0, 1))
-    polygons.append(Polygon(face))
+    tri = Face3D(get_triangle_points())
+    #t = Matrix3D.get_shift_matrix(0, 0, 1).dot(Matrix3D.get_rot_x_matrix(-math.pi/4))
+    face = tri.transform(Matrix3D.get_rot_x_matrix(-math.pi/4))
+    face = face.transform(Matrix3D.get_shift_matrix(0, 0, 1))
+    faces.append(face)
     # back
-    face = get_triangle_points()
-    face = face.dot(Matrix3D.get_rot_x_matrix(math.pi/4))
-    face = face.dot(Matrix3D.get_shift_matrix(0, 0, -1))
-    polygons.append(Polygon(face))
+    face = tri.transform(Matrix3D.get_rot_x_matrix(math.pi/4))
+    face = face.transform(Matrix3D.get_shift_matrix(0, 0, -1))
+    faces.append(face)
     # left
-    face = get_triangle_points()
-    face = face.dot(Matrix3D.get_rot_x_matrix(-math.pi/4))
-    face = face.dot(Matrix3D.get_rot_y_matrix(-math.pi/2))
-    face = face.dot(Matrix3D.get_shift_matrix(1, 0, 0))
-    polygons.append(Polygon(face))
+    face = tri.transform(Matrix3D.get_rot_x_matrix(-math.pi/4))
+    face = face.transform(Matrix3D.get_rot_y_matrix(-math.pi/2))
+    face = face.transform(Matrix3D.get_shift_matrix(1, 0, 0))
+    faces.append(face)
     # right
-    face = get_triangle_points()
-    face = face.dot(Matrix3D.get_rot_x_matrix(-math.pi/4))
-    face = face.dot(Matrix3D.get_rot_y_matrix(math.pi/2))
-    face = face.dot(Matrix3D.get_shift_matrix(-1, 0, 0))
-    polygons.append(face)
-    return polygons
+    face = tri.transform(Matrix3D.get_rot_x_matrix(-math.pi/4))
+    face = face.transform(Matrix3D.get_rot_y_matrix(math.pi/2))
+    face = face.transform(Matrix3D.get_shift_matrix(-1, 0, 0))
+    faces.append(face)
+    return Mesh3D(faces)
 
-def get_cube_polygons():
-    # a cube consist of six faces
+def get_cube_mesh():
+    # a cube Mesh consist of six Faces
     # left
-    polygons = []
-    rec = Mesh3D(get_rectangle_points())
+    faces = []
+    rec = Face3D(get_rectangle_points())
     t = Matrix3D.get_shift_matrix(-1, 0, 0).dot(Matrix3D.get_rot_y_matrix(math.pi/2))
-    polygons += rec.transform(t)
+    faces.append(rec.transform(t))
     # right
     t = Matrix3D.get_shift_matrix(1, 0, 0).dot(Matrix3D.get_rot_y_matrix(math.pi/2))
-    polygons += rec.transform(t)
+    faces.append(rec.transform(t))
     # bottom
     t = Matrix3D.get_shift_matrix(0, -1, 0).dot(Matrix3D.get_rot_x_matrix(math.pi/2))
-    polygons += rec.transform(t)
+    faces.append(rec.transform(t))
     # top
     t = Matrix3D.get_shift_matrix(0, 1, 0).dot(Matrix3D.get_rot_x_matrix(math.pi/2))
-    polygons += rec.transform(t)
+    faces.append(rec.transform(t))
     # front
     t = Matrix3D.get_shift_matrix(0, 0, -1)
-    polygons += rec.transform(t)
+    faces.append(rec.transform(t))
     # back
     t = Matrix3D.get_shift_matrix(0, 0, 1)
-    polygons += rec.transform(t)
-    return polygons
+    faces.append(rec.transform(t))
+    return Mesh3D(faces)
 
 def get_scale_rot_matrix(scale_tuple, aspect_tuple, shift_tuple):
     """

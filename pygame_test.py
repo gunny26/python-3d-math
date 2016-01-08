@@ -23,6 +23,9 @@ X_SHIFT = 0
 Y_SHIFT = 0
 Z_SHIFT = 10
 SCALE = 1.0
+ASPECT_RATIO = 16/9
+far = 100.0
+near = 1.0
 
 class Thing(object):
     """abstract class to represent mesh of polygons"""
@@ -35,7 +38,7 @@ class Thing(object):
         self.surface = surface
         (self.origin_x, self.origin_y) = origin
         self.vector = Vector3D(100, 0, 0, 1)
-        self.model = Mesh3D(Models3D.get_cube_polygons())
+        self.model = Models3D.get_cube_mesh()
         self.center = (surface.get_width() / 2, surface.get_height() / 2)
         self.angle = 0
         self.angle_step = math.pi/180
@@ -52,27 +55,46 @@ class Thing(object):
 
         finally painting on surface is called
         """
-        clipping_m = Matrix3D([
-            [FOV * ASPECT_RATIO, 0  , 0                      , 0],
-            [0                 , FOV, 0                      , 0],
-            [0                 , 0  , (far+near)/(far-near)  , 1],
-            [0                 , 0  , (2*near*far)/(near-far), 0]
-        ])
-        self.vector = Matrix3D.get_rot_z_matrix(math.pi/180).v_dot(self.vector)
-        model = Mesh3D(self.model.transform(Matrix3D.get_rot_z_matrix(self.angle)))
-        model = Mesh3D(model.transform(Matrix3D.get_rot_y_matrix(self.angle)))
-        model = Mesh3D(model.transform(Matrix3D.get_scale_matrix(SCALE, SCALE, SCALE)))
-        # shift it in the back
-        model = Mesh3D(model.transform(Matrix3D.get_shift_matrix(X_SHIFT, Y_SHIFT, Z_SHIFT)))
+        # Clock vector
+        vector = Matrix3D.get_rot_z_matrix(self.angle).v_dot(self.vector)
+        # projected = self.__project(self.vector, self.center)
+        projected = self.__projectm(vector, self.center)
+        pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), (self.center, projected), 1)
+        # Cube
+        mesh = self.model.transform(Matrix3D.get_rot_z_matrix(self.angle))
+        #mesh = mesh.transform(Matrix3D.get_rot_x_matrix(self.angle))
+        mesh = mesh.transform(Matrix3D.get_scale_matrix(SCALE, SCALE, SCALE))
+        mesh = mesh.transform(Matrix3D.get_shift_matrix(X_SHIFT, Y_SHIFT, Z_SHIFT))
+        for face in mesh:
+            vertices = [self.__projectm(vertice, self.center) for vertice in face]
+            pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), vertices, 1)
         self.angle += self.angle_step
-        #self.vector = Matrix3D.get_rot_y_matrix(math.pi/180).v_dot(self.vector)
-        projected = self.__project(self.vector, self.center)
-        pygame.draw.polygon(self.surface, pygame.Color(255,0,0,0), (self.center, self.__project(self.x_axis, self.center)), 1)
-        pygame.draw.polygon(self.surface, pygame.Color(0,255,0,0), (self.center, self.__project(self.y_axis, self.center)), 1)
-        pygame.draw.polygon(self.surface, pygame.Color(0,0,255,0), (self.center, self.__project(self.z_axis, self.center)), 1)
-        #pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), (self.center, projected), 1)
-        pygame.draw.polygon(self.surface, pygame.Color(255,255,255,0), model.projected(self.center, fov=FOV, viewer_distance=VIEWER_DISTANCE), 1)
+        # axis vectors
+        pygame.draw.polygon(self.surface, pygame.Color(255,0,0,0), (self.center, self.__projectm(self.x_axis, self.center)), 1)
+        pygame.draw.polygon(self.surface, pygame.Color(0,255,0,0), (self.center, self.__projectm(self.y_axis, self.center)), 1)
+        pygame.draw.polygon(self.surface, pygame.Color(0,0,255,0), (self.center, self.__projectm(self.z_axis, self.center)), 1)
 
+    @staticmethod
+    def __projectm(vector, center):
+        """
+        called on every frame
+        apply transformation matrix and project every polygon to 2d
+        for color avg_z function is used
+        polygons are sorted on avg_z value
+
+        finally painting on surface is called
+        """
+        clipping_m = Matrix3D([
+            [FOV * ASPECT_RATIO, 0.0, 0.0                            , 0.0],
+            [0.0               , FOV, 0.0                            , 0.0],
+            [0.0               , 0.0, (far + near) / (far-near)      , (2.0 * near * far) / (near-far)],
+            [0.0               , 0.0, 1.0                            , 0.0]
+        ])
+        new_vector = clipping_m.v_dot(vector)
+        new_x = center[0] + new_vector.x * 16.0 / ( 2.0 * new_vector.z) + 8.0
+        new_y = center[1] + new_vector.y * 9.0 / ( 2.0 * new_vector.z) + 4.5
+        return new_x, new_y
+ 
     @staticmethod
     def __project(vector, shift_tuple, fov=FOV, viewer_distance=VIEWER_DISTANCE):
         factor = fov / (viewer_distance + vector[2])
