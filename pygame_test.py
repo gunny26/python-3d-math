@@ -19,13 +19,15 @@ FOV = 1.0 / math.tan(FOV_ANGLE/2.0)
 VIEWER_DISTANCE = 1.1
 
 # shift Z in the background
-X_SHIFT = 0
-Y_SHIFT = 0
-Z_SHIFT = 10
+X_SHIFT = 0.0
+Y_SHIFT = 0.0
+Z_SHIFT = 10.0
 SCALE = 1.0
-ASPECT_RATIO = 16/9
+ASPECT_RATIO = 16.0/9.0
 far = 100.0
 near = 1.0
+Y_ANGLE = 0.0
+X_ANGLE = 0.0
 
 class Thing(object):
     """abstract class to represent mesh of polygons"""
@@ -77,12 +79,15 @@ class Thing(object):
     @staticmethod
     def __projectm(vector, center):
         """
-        called on every frame
-        apply transformation matrix and project every polygon to 2d
-        for color avg_z function is used
-        polygons are sorted on avg_z value
+        apply 
+        clipping matrix
+        camera transformation matrix
+        camera rotation matrix
 
-        finally painting on surface is called
+        TODO: finally sort out vertices out of clipping area
+
+        and return tuple on 2D Coordinates
+        taken from : http://stackoverflow.com/questions/724219/how-to-convert-a-3d-point-into-2d-perspective-projection
         """
         clipping_m = Matrix3D([
             [FOV * ASPECT_RATIO, 0.0, 0.0                            , 0.0],
@@ -90,7 +95,10 @@ class Thing(object):
             [0.0               , 0.0, (far + near) / (far-near)      , (2.0 * near * far) / (near-far)],
             [0.0               , 0.0, 1.0                            , 0.0]
         ])
-        new_vector = clipping_m.v_dot(vector)
+        cam_translation_m = Matrix3D.get_shift_matrix(0, 0, -10)
+        cam_rot_m = Matrix3D.get_rot_y_matrix(Y_ANGLE).dot(Matrix3D.get_rot_x_matrix(X_ANGLE))
+        # mind the order !!
+        new_vector = clipping_m.dot(cam_translation_m.dot(cam_rot_m)).v_dot(vector)
         new_x = center[0] + new_vector.x * 16.0 / ( 2.0 * new_vector.z) + 8.0
         new_y = center[1] + new_vector.y * 9.0 / ( 2.0 * new_vector.z) + 4.5
         return new_x, new_y
@@ -125,6 +133,8 @@ def test():
         global Y_SHIFT
         global Z_SHIFT
         global SCALE
+        global X_ANGLE
+        global Y_ANGLE
         while True:
             clock.tick(fps)
             events = pygame.event.get()
@@ -137,10 +147,13 @@ def test():
                 if keyinput[pygame.K_ESCAPE]:
                     sys.exit(1)
                 elif keyinput[pygame.K_UP]:
-                    VIEWER_DISTANCE += 0.1
+                    X_ANGLE += math.pi / 180
                 elif keyinput[pygame.K_DOWN]:
-                    if VIEWER_DISTANCE > 0.1 :
-                        VIEWER_DISTANCE -= 0.1
+                    X_ANGLE -= math.pi / 180
+                elif keyinput[pygame.K_LEFT]:
+                    Y_ANGLE += math.pi / 180
+                elif keyinput[pygame.K_RIGHT]:
+                    Y_ANGLE -= math.pi / 180
                 elif keyinput[pygame.K_PLUS]:
                     FOV += 0.1
                 elif keyinput[pygame.K_MINUS]:
@@ -191,6 +204,10 @@ def test():
                 surface.blit(text, (10, 66))
                 text = myfont.render("SCALE          : %0.2f" % SCALE, 1, (255,255,0))
                 surface.blit(text, (10, 80))
+                text = myfont.render("X_ANGLE        : %0.2f" % X_ANGLE, 1, (255,255,0))
+                surface.blit(text, (10, 94))
+                text = myfont.render("Y_ANGLE        : %0.2f" % Y_ANGLE, 1, (255,255,0))
+                surface.blit(text, (10, 108))
                 pygame.display.flip()
             frames += 1
         duration = time.time() - anim_starttime
